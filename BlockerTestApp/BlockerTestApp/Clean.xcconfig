@@ -1,0 +1,6 @@
+// Clean.xcconfig
+// Build configuration for clean control builds (no blockers).
+
+IPHONEOS_DEPLOYMENT_TARGET = 16.0
+OTHER_LDFLAGS = $(inherited)
+CODE_SIGN_ENTITLEMENTS = BlockerTestApp/BlockerTestApp-Clean.entitlements

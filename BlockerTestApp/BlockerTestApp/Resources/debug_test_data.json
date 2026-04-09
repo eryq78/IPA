@@ -1,0 +1,14 @@
+{
+  "_comment": "BLOCKER 5: This file is a debug/test artifact deliberately included in the app bundle.",
+  "_purpose": "A compliance scanner should flag files like this as shipping mistakes.",
+  "_guideline": "Apple Guideline 2.1 - App Completeness",
+  "_detection": "unzip -l on the .ipa will show this file in the Payload directory",
+  "test_users": [
+    {"id": 1, "name": "test_user_1", "token": "DEBUG_TOKEN_abc123"},
+    {"id": 2, "name": "test_user_2", "token": "DEBUG_TOKEN_def456"}
+  ],
+  "debug_endpoints": {
+    "staging_api": "https://staging-api.example.com/v1",
+    "debug_logging": true
+  }
+}

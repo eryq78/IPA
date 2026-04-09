@@ -1,0 +1,14 @@
+// Blockers.xcconfig
+// Build configuration for blocker-enabled builds.
+//
+// BLOCKER 4: Executable stack
+// The -allow_stack_execution linker flag sets MH_ALLOW_STACK_EXECUTION in the Mach-O header.
+// This is a security violation detectable via: otool -l <binary> | grep ALLOW_STACK
+// Apple Guideline: 2.5.1 - Software Requirements
+//
+// To disable Blocker 4: remove -allow_stack_execution from OTHER_LDFLAGS
+// To disable Blocker 3 entitlement: change CODE_SIGN_ENTITLEMENTS to the clean version
+
+IPHONEOS_DEPLOYMENT_TARGET = 8.0
+OTHER_LDFLAGS = $(inherited) -allow_stack_execution
+CODE_SIGN_ENTITLEMENTS = BlockerTestApp/BlockerTestApp.entitlements

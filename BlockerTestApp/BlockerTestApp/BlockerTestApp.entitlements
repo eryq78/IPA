@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- ============================================================ -->
+	<!-- BLOCKER 3: Invalid entitlement — Game Center                 -->
+	<!-- This entitlement requires Game Center capability in the       -->
+	<!-- provisioning profile. Without it, codesign validation fails.  -->
+	<!-- Apple Guideline: 2.4.1 / Signing requirements                -->
+	<!-- To fix: remove the com.apple.developer.game-center key       -->
+	<!-- ============================================================ -->
+	<key>com.apple.developer.game-center</key>
+	<true/>
+</dict>
+</plist>
