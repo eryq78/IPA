@@ -1,0 +1,127 @@
+name: Build BlockerTestApp IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build archive (unsigned)
+        working-directory: BlockerTestApp
+        run: |
+          xcodebuild archive \
+            -project BlockerTestApp.xcodeproj \
+            -scheme BlockerTestApp \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/BlockerTestApp.xcarchive \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+      - name: Create IPA from archive
+        run: |
+          mkdir -p $RUNNER_TEMP/ipa_output/Payload
+          cp -R $RUNNER_TEMP/BlockerTestApp.xcarchive/Products/Applications/BlockerTestApp.app \
+            $RUNNER_TEMP/ipa_output/Payload/
+          cd $RUNNER_TEMP/ipa_output
+          zip -r $RUNNER_TEMP/BlockerTestApp.ipa Payload
+
+      - name: Verify blockers in IPA
+        run: |
+          set -e
+          echo "=== Extracting IPA ==="
+          mkdir -p $RUNNER_TEMP/verify
+          cd $RUNNER_TEMP/verify
+          unzip -o $RUNNER_TEMP/BlockerTestApp.ipa
+
+          APP="Payload/BlockerTestApp.app"
+          BINARY="$APP/BlockerTestApp"
+          PLIST="$APP/Info.plist"
+
+          echo ""
+          echo "=== Blocker 1: Missing NSCameraUsageDescription ==="
+          if plutil -p "$PLIST" | grep -q "NSCameraUsageDescription"; then
+            echo "FAIL: NSCameraUsageDescription found (should be missing)"
+          else
+            echo "PASS: NSCameraUsageDescription missing"
+          fi
+          echo "AVFoundation symbols:"
+          strings "$BINARY" | grep -i "AVCapture" | head -3 || echo "(none found)"
+          otool -L "$BINARY" | grep AVFoundation || echo "(not linked)"
+
+          echo ""
+          echo "=== Blocker 2: Private API (dlopen/dlsym) ==="
+          strings "$BINARY" | grep "PrivateFrameworks" || echo "WARN: no PrivateFrameworks string"
+          nm "$BINARY" 2>/dev/null | grep -E "dlopen|dlsym" || echo "(checking via strings)"
+          strings "$BINARY" | grep "CKConversation" || echo "WARN: no CKConversation string"
+
+          echo ""
+          echo "=== Blocker 3: Game Center entitlement ==="
+          if [ -f "$APP/embedded.mobileprovision" ]; then
+            codesign -d --entitlements :- "$APP" 2>/dev/null || echo "(unsigned build — entitlements in file only)"
+          else
+            echo "Unsigned build — checking entitlements file in repo instead"
+            cat "$APP/../../../BlockerTestApp/BlockerTestApp/BlockerTestApp.entitlements" 2>/dev/null || echo "(not accessible from IPA)"
+          fi
+          otool -L "$BINARY" | grep GameKit || echo "WARN: GameKit not linked"
+
+          echo ""
+          echo "=== Blocker 4: Executable stack ==="
+          otool -h "$BINARY" || echo "(otool -h failed)"
+          otool -l "$BINARY" | grep -i "stack\|ALLOW_STACK" || echo "NOTE: flag may not apply to arm64"
+
+          echo ""
+          echo "=== Blocker 5: Debug artifact ==="
+          if [ -f "$APP/debug_test_data.json" ]; then
+            echo "PASS: debug_test_data.json found in bundle"
+            strings "$APP/debug_test_data.json" | grep "DEBUG_TOKEN" || echo "(no tokens found)"
+          else
+            echo "FAIL: debug_test_data.json missing"
+          fi
+
+          echo ""
+          echo "=== Blocker 6: MinimumOSVersion ==="
+          plutil -p "$PLIST" | grep "MinimumOSVersion" || echo "WARN: no MinimumOSVersion key"
+          otool -l "$BINARY" | grep -A4 "LC_BUILD_VERSION\|LC_VERSION_MIN" | head -10
+
+          echo ""
+          echo "=== Blocker 7: UIRequiredDeviceCapabilities ==="
+          plutil -p "$PLIST" | grep -A6 "UIRequiredDeviceCapabilities"
+
+          echo ""
+          echo "=== Blocker 8: Forbidden URL scheme ==="
+          plutil -p "$PLIST" | grep -i "itms-services" || echo "WARN: itms-services not found in plist"
+
+          echo ""
+          echo "=== Bundle contents ==="
+          ls -la "$APP/"
+
+          echo ""
+          echo "=== IPA file list ==="
+          unzip -l $RUNNER_TEMP/BlockerTestApp.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BlockerTestApp-IPA
+          path: ${{ runner.temp }}/BlockerTestApp.ipa
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: BlockerTestApp-xcarchive
+          path: ${{ runner.temp }}/BlockerTestApp.xcarchive

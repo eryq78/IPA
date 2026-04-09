@@ -38,46 +38,30 @@ BlockerTestApp/
 └── VERIFY.md
 ```
 
-## Bouwen via Xcode Cloud
+## Bouwen via GitHub Actions
 
-### Stap 1: Repository koppelen
+Geen macOS of Xcode nodig. De build draait volledig op GitHub's macOS runners.
 
-1. Open het project in Xcode (`BlockerTestApp/BlockerTestApp.xcodeproj`)
-2. Ga naar **Product > Xcode Cloud > Create Workflow**
-3. Koppel aan de GitHub repository `eryq78/IPA`
-4. Selecteer het scheme **BlockerTestApp**
+### Stap 1: Automatische build
 
-### Stap 2: Workflow configureren
+De workflow draait automatisch bij elke push naar `main`. Je kunt hem ook handmatig starten:
 
-- **Start condition**: Manual of bij push naar `main`
-- **Environment**: Latest release Xcode, macOS
-- **Actions**: Archive (iOS)
-- **Post-actions**: De `ci_scripts/ci_post_xcodebuild.sh` draait automatisch
+1. Ga naar https://github.com/eryq78/IPA/actions
+2. Klik op **Build BlockerTestApp IPA**
+3. Klik op **Run workflow**
 
-### Stap 3: Build starten
+### Stap 2: IPA downloaden
 
-1. Start de workflow in Xcode of via App Store Connect
-2. Download de .ipa uit het Artifacts tab van de build
+1. Open de voltooide workflow run
+2. Scroll naar **Artifacts**
+3. Download **BlockerTestApp-IPA** — dit is je .ipa bestand
 
-### Lokaal archiveren (optioneel, vereist macOS)
+### Wat de workflow doet
 
-```bash
-cd BlockerTestApp
-xcodebuild archive \
-  -project BlockerTestApp.xcodeproj \
-  -scheme BlockerTestApp \
-  -configuration Release \
-  -archivePath build/BlockerTestApp.xcarchive \
-  -destination "generic/platform=iOS" \
-  CODE_SIGN_IDENTITY="-" \
-  CODE_SIGNING_ALLOWED=NO
-
-# Export naar .ipa (ad-hoc of development signing vereist)
-xcodebuild -exportArchive \
-  -archivePath build/BlockerTestApp.xcarchive \
-  -exportPath build/ \
-  -exportOptionsPlist ExportOptions.plist
-```
+- Bouwt een unsigned .ipa op een macOS 15 runner met Xcode 16.2
+- Draait automatische verificatie van alle 8 blockers
+- Upload de .ipa als downloadbaar artifact
+- Geen Apple Developer account of signing vereist
 
 ## Controleversie (zonder blockers)
 
