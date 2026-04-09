@@ -44,7 +44,7 @@
 	<!-- To fix: remove this key or set to a valid version (16.0+)    -->
 	<!-- ============================================================ -->
 	<key>MinimumOSVersion</key>
-	<string>8.0</string>
+	<string>12.0</string>
 
 	<!-- ============================================================ -->
 	<!-- BLOCKER 7: UIRequiredDeviceCapabilities mismatch              -->
