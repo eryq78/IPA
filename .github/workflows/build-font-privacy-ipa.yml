@@ -1,0 +1,229 @@
+name: Build FontPrivacyTestApp IPA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'FontPrivacyTestApp/**'
+      - 'scripts/prepare_assets.sh'
+      - '.github/workflows/build-font-privacy-ipa.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      # ─────────────────────────────────────────────────────────────
+      # Build the Xcode project (Swift sources + deprecated frameworks)
+      # ─────────────────────────────────────────────────────────────
+      - name: Build archive (unsigned)
+        working-directory: FontPrivacyTestApp
+        run: |
+          xcodebuild archive \
+            -project FontPrivacyTestApp.xcodeproj \
+            -scheme FontPrivacyTestApp \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/FontPrivacyTestApp.xcarchive \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            SWIFT_SUPPRESS_WARNINGS=YES \
+            2>&1 | tee /tmp/xcodebuild.log | grep -E "(error:|warning:|Build succeeded|** ARCHIVE)"
+
+      # ─────────────────────────────────────────────────────────────
+      # Inject fonts and fake SDK frameworks into the .app bundle
+      # ─────────────────────────────────────────────────────────────
+      - name: Prepare fonts and fake SDK frameworks
+        run: |
+          chmod +x scripts/prepare_assets.sh
+          scripts/prepare_assets.sh \
+            "$RUNNER_TEMP/FontPrivacyTestApp.xcarchive/Products/Applications/FontPrivacyTestApp.app"
+
+      # ─────────────────────────────────────────────────────────────
+      # Package as IPA
+      # ─────────────────────────────────────────────────────────────
+      - name: Create IPA
+        run: |
+          mkdir -p $RUNNER_TEMP/ipa_output/Payload
+          cp -R "$RUNNER_TEMP/FontPrivacyTestApp.xcarchive/Products/Applications/FontPrivacyTestApp.app" \
+            $RUNNER_TEMP/ipa_output/Payload/
+          cd $RUNNER_TEMP/ipa_output
+          zip -r $RUNNER_TEMP/FontPrivacyTestApp.ipa Payload
+
+      # ─────────────────────────────────────────────────────────────
+      # Verify all expected blockers are detectable in the IPA
+      # ─────────────────────────────────────────────────────────────
+      - name: Verify scanner test points in IPA
+        run: |
+          set -e
+          echo "=== Extracting IPA ==="
+          mkdir -p $RUNNER_TEMP/verify
+          cd $RUNNER_TEMP/verify
+          unzip -o $RUNNER_TEMP/FontPrivacyTestApp.ipa
+
+          APP="Payload/FontPrivacyTestApp.app"
+          BINARY="$APP/FontPrivacyTestApp"
+          PLIST="$APP/Info.plist"
+
+          # ── FONTS ─────────────────────────────────────────────────
+          echo ""
+          echo "=== FONTS: UIAppFonts in Info.plist ==="
+          plutil -p "$PLIST" | grep -A20 "UIAppFonts" || echo "WARN: UIAppFonts key missing"
+
+          echo ""
+          echo "=== FONTS: Files in bundle ==="
+          find "$APP/Fonts" -type f 2>/dev/null | sort || echo "WARN: Fonts directory not found"
+
+          echo ""
+          echo "=== FONTS: Font family names (from binary name tables) ==="
+          for ttf in "$APP/Fonts/"*.ttf; do
+            [ -f "$ttf" ] || continue
+            fname=$(basename "$ttf")
+            # Use python to read the name table
+            python3 -c "
+from fontTools.ttLib import TTFont
+try:
+    f = TTFont('$ttf')
+    name = f['name']
+    family = name.getDebugName(1) or '(unknown)'
+    style  = name.getDebugName(2) or '(unknown)'
+    print(f'  $fname  →  {family} {style}')
+except Exception as e:
+    print(f'  $fname  →  (could not parse: {e})')
+" 2>/dev/null || echo "  $fname  →  (fonttools not available)"
+          done
+
+          # ── DEPRECATED SDKs ───────────────────────────────────────
+          echo ""
+          echo "=== DEPRECATED SDKs: Linked frameworks (otool -L) ==="
+          otool -L "$BINARY" | tee /tmp/linked_frameworks.txt
+
+          echo ""
+          echo "=== DEPRECATED: AddressBook ==="
+          if grep -q "AddressBook" /tmp/linked_frameworks.txt; then
+            echo "PASS: AddressBook.framework linked (deprecated iOS 9)"
+          else
+            echo "FAIL: AddressBook not detected in linked frameworks"
+          fi
+
+          echo ""
+          echo "=== DEPRECATED: OpenGLES ==="
+          if grep -q "OpenGLES" /tmp/linked_frameworks.txt; then
+            echo "PASS: OpenGLES.framework linked (deprecated iOS 12)"
+          else
+            echo "FAIL: OpenGLES not detected in linked frameworks"
+          fi
+
+          echo ""
+          echo "=== DEPRECATED: NSURLConnection (symbol in binary) ==="
+          if strings "$BINARY" | grep -q "NSURLConnection"; then
+            echo "PASS: NSURLConnection string found in binary"
+          else
+            nm "$BINARY" 2>/dev/null | grep -i "NSURLConnection" && echo "PASS: symbol found" || \
+              echo "NOTE: NSURLConnection not found in strings (may still be in ObjC msgSend)"
+          fi
+
+          # ── PRIVACY MANIFEST (app) ────────────────────────────────
+          echo ""
+          echo "=== PRIVACY MANIFEST: App PrivacyInfo.xcprivacy ==="
+          if [ -f "$APP/PrivacyInfo.xcprivacy" ]; then
+            echo "PASS: PrivacyInfo.xcprivacy present"
+            plutil -p "$APP/PrivacyInfo.xcprivacy"
+            echo ""
+            echo "  Checking for invalid reason code 'CA92.1'..."
+            grep -q "CA92.1" "$APP/PrivacyInfo.xcprivacy" && \
+              echo "  FAIL (expected): Invalid reason code CA92.1 found" || \
+              echo "  (CA92.1 not found — check plist)"
+            echo "  Checking for MISSING UserDefaults declaration..."
+            grep -q "UserDefaults" "$APP/PrivacyInfo.xcprivacy" && \
+              echo "  (UserDefaults IS declared)" || \
+              echo "  FAIL (expected): UserDefaults NOT declared (but used in FontLoader.swift)"
+            echo "  Checking for MISSING FileTimestamp declaration..."
+            grep -q "FileTimestamp" "$APP/PrivacyInfo.xcprivacy" && \
+              echo "  (FileTimestamp IS declared)" || \
+              echo "  FAIL (expected): FileTimestamp NOT declared (but used in FontLoader.swift)"
+          else
+            echo "FAIL: PrivacyInfo.xcprivacy NOT found in bundle"
+          fi
+
+          # ── SDK PRIVACY MANIFESTS ─────────────────────────────────
+          echo ""
+          echo "=== SDK PRIVACY MANIFESTS: FakeAnalyticsSDK.framework ==="
+          if [ -d "$APP/Frameworks/FakeAnalyticsSDK.framework" ]; then
+            echo "PASS: FakeAnalyticsSDK.framework present"
+            if [ -f "$APP/Frameworks/FakeAnalyticsSDK.framework/PrivacyInfo.xcprivacy" ]; then
+              echo "  Has PrivacyInfo.xcprivacy (but it is WRONG):"
+              plutil -p "$APP/Frameworks/FakeAnalyticsSDK.framework/PrivacyInfo.xcprivacy"
+            else
+              echo "  FAIL: No PrivacyInfo.xcprivacy"
+            fi
+          else
+            echo "FAIL: FakeAnalyticsSDK.framework not found"
+          fi
+
+          echo ""
+          echo "=== SDK PRIVACY MANIFESTS: FakeTrackerSDK.framework ==="
+          if [ -d "$APP/Frameworks/FakeTrackerSDK.framework" ]; then
+            echo "PASS: FakeTrackerSDK.framework present"
+            if [ -f "$APP/Frameworks/FakeTrackerSDK.framework/PrivacyInfo.xcprivacy" ]; then
+              echo "  Has PrivacyInfo.xcprivacy"
+            else
+              echo "  FAIL (expected): NO PrivacyInfo.xcprivacy at all"
+            fi
+          else
+            echo "FAIL: FakeTrackerSDK.framework not found"
+          fi
+
+          # ── SUMMARY ───────────────────────────────────────────────
+          echo ""
+          echo "=== Full IPA file listing ==="
+          unzip -l $RUNNER_TEMP/FontPrivacyTestApp.ipa
+
+          echo ""
+          echo "=== SCANNER TEST SUMMARY ==="
+          echo "Expected findings for a well-implemented IPA scanner:"
+          echo ""
+          echo "  FONTS"
+          echo "    ❌ HelveticaNeue-Bold.ttf       commercial — Linotype GmbH"
+          echo "    ❌ ProximaNova-Regular.ttf       commercial — Mark Simonson Studio"
+          echo "    ❌ GothamBook.ttf                commercial — Hoefler & Co"
+          echo "    ❌ BrandonGrotesque-Regular.ttf  commercial — HVD Fonts"
+          echo "    ❌ FuturaPT-Medium.ttf           commercial — ParaType"
+          echo "    ✅ Inter-Regular.ttf             open source — SIL OFL 1.1"
+          echo ""
+          echo "  DEPRECATED SDKs"
+          echo "    ❌ AddressBook.framework         deprecated since iOS 9"
+          echo "    ❌ OpenGLES.framework            deprecated since iOS 12"
+          echo "    ❌ NSURLConnection               deprecated class in binary"
+          echo ""
+          echo "  PRIVACY MANIFEST (app)"
+          echo "    ❌ Reason code CA92.1 invalid    not in Apple's approved list"
+          echo "    ❌ UserDefaults not declared      accessed but missing from manifest"
+          echo "    ❌ FileTimestamp not declared     accessed but missing from manifest"
+          echo ""
+          echo "  SDK PRIVACY MANIFESTS"
+          echo "    ❌ FakeAnalyticsSDK.framework    NSPrivacyTracking=true without TrackingDomains; invalid reason FAKE001"
+          echo "    ❌ FakeTrackerSDK.framework      NO PrivacyInfo.xcprivacy"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FontPrivacyTestApp-IPA
+          path: ${{ runner.temp }}/FontPrivacyTestApp.ipa
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: FontPrivacyTestApp-xcarchive
+          path: ${{ runner.temp }}/FontPrivacyTestApp.xcarchive

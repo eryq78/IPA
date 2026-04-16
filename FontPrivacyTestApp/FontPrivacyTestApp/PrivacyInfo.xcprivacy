@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    PrivacyInfo.xcprivacy — INTENTIONALLY BROKEN for IPA scanner testing.
+
+    Violations present:
+      1. NSPrivacyAccessedAPICategoryDiskSpace declared with INVALID reason code "CA92.1"
+         (valid codes: E174.1, 85F4.1, 7D9E.1, B728.1)
+      2. NSPrivacyAccessedAPICategoryUserDefaults NOT declared
+         — but app accesses UserDefaults in FontLoader.swift
+      3. NSPrivacyAccessedAPICategoryFileTimestamp NOT declared
+         — but app accesses file modification dates in FontLoader.swift
+      4. NSPrivacyCollectedDataTypes absent
+         — but app accesses UIDevice.identifierForVendor equivalent data
+      5. NSPrivacyTracking = false, but FakeAnalyticsSDK.framework inside
+         the bundle sets NSPrivacyTracking = true without NSPrivacyTrackingDomains
+-->
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+
+    <!-- BROKEN: Only one API type declared; two more are accessed but not listed. -->
+    <!-- BROKEN: The reason code below is fabricated and not in Apple's approved list. -->
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <!-- Disk space IS accessed, but with a completely invalid reason code. -->
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <!-- INVALID: "CA92.1" does not exist in Apple's reason code table -->
+                <string>CA92.1</string>
+            </array>
+        </dict>
+        <!-- MISSING: NSPrivacyAccessedAPICategoryUserDefaults (used in FontLoader.swift) -->
+        <!-- MISSING: NSPrivacyAccessedAPICategoryFileTimestamp (used in FontLoader.swift) -->
+    </array>
+
+    <!-- MISSING: NSPrivacyCollectedDataTypes array (required when data is collected) -->
+</dict>
+</plist>

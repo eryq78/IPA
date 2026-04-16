@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Standard bundle keys -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+
+	<!-- =============================================================
+	     SCANNER TEST: UIAppFonts — custom fonts embedded in bundle
+	     Apple review will check each font file for valid licensing.
+	     5 of the 6 fonts below are commercial and require a paid
+	     license for distribution — Apple Guideline 5.2.2.
+	     ============================================================= -->
+	<key>UIAppFonts</key>
+	<array>
+		<!-- COMMERCIAL — Linotype GmbH (requires license) -->
+		<string>HelveticaNeue-Bold.ttf</string>
+
+		<!-- COMMERCIAL — Mark Simonson Studio (requires license) -->
+		<string>ProximaNova-Regular.ttf</string>
+
+		<!-- COMMERCIAL — Hoefler &amp; Co (requires license) -->
+		<string>GothamBook.ttf</string>
+
+		<!-- COMMERCIAL — HVD Fonts (requires license) -->
+		<string>BrandonGrotesque-Regular.ttf</string>
+
+		<!-- COMMERCIAL — ParaType (requires license) -->
+		<string>FuturaPT-Medium.ttf</string>
+
+		<!-- OPEN SOURCE — SIL Open Font License 1.1 (permitted) -->
+		<string>Inter-Regular.ttf</string>
+	</array>
+
+	<!-- =============================================================
+	     Scanner note: NSContactsUsageDescription deliberately missing
+	     even though AddressBook.framework is linked (blocker).
+	     ============================================================= -->
+</dict>
+</plist>
