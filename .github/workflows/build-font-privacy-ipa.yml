@@ -12,10 +12,10 @@ on:
 jobs:
   build:
     runs-on: macos-15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Select Xcode version
         run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
@@ -41,10 +41,12 @@ jobs:
             DEVELOPMENT_TEAM="" \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             SWIFT_SUPPRESS_WARNINGS=YES \
-            2>&1 | tee /tmp/xcodebuild.log | grep -E "(error:|warning:|Build succeeded|ARCHIVE SUCCEEDED|ARCHIVE FAILED)" || true
-          # Print full log on failure
-          if grep -q "ARCHIVE FAILED\|error:" /tmp/xcodebuild.log 2>/dev/null; then
-            echo "=== Full xcodebuild log ===" && cat /tmp/xcodebuild.log && exit 1
+            2>&1 | tee /tmp/xcodebuild.log || true
+          echo "--- xcodebuild summary ---"
+          grep -E "error:|ARCHIVE SUCCEEDED|ARCHIVE FAILED|Build succeeded|Build FAILED" /tmp/xcodebuild.log | tail -30 || true
+          # Fail step if archive did not succeed
+          if ! grep -q "ARCHIVE SUCCEEDED" /tmp/xcodebuild.log; then
+            echo "=== FULL XCODEBUILD LOG ===" && cat /tmp/xcodebuild.log && exit 1
           fi
 
       # ─────────────────────────────────────────────────────────────
@@ -106,11 +108,11 @@ jobs:
           otool -L "$BINARY" | tee /tmp/linked_frameworks.txt
 
           echo ""
-          echo "=== DEPRECATED: AddressBook ==="
-          if grep -q "AddressBook" /tmp/linked_frameworks.txt; then
-            echo "PASS: AddressBook.framework linked (deprecated iOS 9)"
+          echo "=== DEPRECATED: GLKit ==="
+          if grep -q "GLKit" /tmp/linked_frameworks.txt; then
+            echo "PASS: GLKit.framework linked (deprecated iOS 12)"
           else
-            echo "FAIL: AddressBook not detected in linked frameworks"
+            echo "FAIL: GLKit not detected in linked frameworks"
           fi
 
           echo ""
@@ -199,7 +201,7 @@ jobs:
           echo "    ✅ Inter-Regular.ttf             open source — SIL OFL 1.1"
           echo ""
           echo "  DEPRECATED SDKs"
-          echo "    ❌ AddressBook.framework         deprecated since iOS 9"
+          echo "    ❌ GLKit.framework               deprecated since iOS 12"
           echo "    ❌ OpenGLES.framework            deprecated since iOS 12"
           echo "    ❌ NSURLConnection               deprecated class in binary"
           echo ""

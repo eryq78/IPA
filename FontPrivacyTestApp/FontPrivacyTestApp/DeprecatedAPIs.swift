@@ -10,32 +10,30 @@
 //                               Replace with: URLSession
 
 import UIKit
-import AddressBook   // DEPRECATED since iOS 9.0  — use Contacts framework
-import OpenGLES      // DEPRECATED since iOS 12.0 — use Metal framework
-import OpenGLES.ES3
+import GLKit        // DEPRECATED since iOS 12.0 — use Metal framework
+import OpenGLES     // DEPRECATED since iOS 12.0 — use Metal framework
 
 class DeprecatedAPIDemo: NSObject {
 
     // ----------------------------------------------------------------
-    // DEPRECATED 1: AddressBook C API
-    // Apple rejection: "This app accesses the following deprecated API:
-    //   ABAddressBookGetAuthorizationStatus"
+    // DEPRECATED 1: GLKit (entire framework deprecated iOS 12)
+    // Apple rejection: ITMS-90789 — "Deprecated API usage: OpenGL ES / GLKit"
+    // GLKit wraps OpenGL ES which Apple replaced with Metal.
     // ----------------------------------------------------------------
-    @available(iOS, deprecated: 9.0, message: "Use CNContactStore from Contacts framework")
-    static func checkAddressBookAccess() {
-        let authStatus = ABAddressBookGetAuthorizationStatus()
-        switch authStatus {
-        case .notDetermined:
-            print("[DeprecatedAPI] ABAddressBook: not determined")
-        case .authorized:
-            print("[DeprecatedAPI] ABAddressBook: authorized")
-        case .denied:
-            print("[DeprecatedAPI] ABAddressBook: denied")
-        case .restricted:
-            print("[DeprecatedAPI] ABAddressBook: restricted")
-        @unknown default:
-            print("[DeprecatedAPI] ABAddressBook: unknown")
-        }
+    @available(iOS, deprecated: 12.0, message: "Use MetalKit / Metal framework instead")
+    static func createGLKView() -> GLKView {
+        // GLKView is deprecated — use MTKView from MetalKit instead
+        let view = GLKView(frame: .zero)
+        print("[DeprecatedAPI] GLKView created (deprecated iOS 12): \(view)")
+        return view
+    }
+
+    @available(iOS, deprecated: 12.0, message: "Use Metal shaders instead")
+    static func createGLKEffect() {
+        // GLKBaseEffect is deprecated — use Metal shaders instead
+        let effect = GLKBaseEffect()
+        effect.light0.enabled = GLboolean(GL_TRUE)
+        print("[DeprecatedAPI] GLKBaseEffect created (deprecated iOS 12): \(effect)")
     }
 
     // ----------------------------------------------------------------
@@ -49,7 +47,6 @@ class DeprecatedAPIDemo: NSObject {
             print("[DeprecatedAPI] OpenGL ES 3 context created: \(ctx)")
             return ctx
         }
-        // Fallback to OpenGL ES 2
         let ctx = EAGLContext(api: .openGLES2)
         print("[DeprecatedAPI] OpenGL ES 2 context created: \(String(describing: ctx))")
         return ctx
@@ -74,7 +71,7 @@ class DeprecatedAPIDemo: NSObject {
     }
 
     static func runAll() {
-        checkAddressBookAccess()
+        createGLKEffect()
         let _ = createOpenGLContext()
         // Note: sendDeprecatedRequest() not called to avoid live network hit,
         // but the symbol reference is still present in the binary.

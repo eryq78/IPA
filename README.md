@@ -76,7 +76,7 @@ Apple keurt apps af die commerciële fonts redistributen zonder geldige licentie
 
 | Framework / Klasse | Deprecated sinds | Apple foutcode |
 |--------------------|-----------------|----------------|
-| `AddressBook.framework` | iOS 9.0 | ITMS-90683 |
+| `GLKit.framework` | iOS 12.0 | ITMS-90789 |
 | `OpenGLES.framework` | iOS 12.0 | ITMS-90789 |
 | `NSURLConnection` | iOS 9.0 | — |
 

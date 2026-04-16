@@ -13,7 +13,7 @@
 		B10000010000000000000004 /* FontLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000004; };
 		B10000010000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000005; };
 		B10000010000000000000006 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000007; };
-		B10000010000000000000020 /* AddressBook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B20000010000000000000020; };
+		B10000010000000000000020 /* GLKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B20000010000000000000020; };
 		B10000010000000000000021 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B20000010000000000000021; };
 /* End PBXBuildFile section */
 
@@ -25,7 +25,7 @@
 		B20000010000000000000005 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B20000010000000000000006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B20000010000000000000007 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = data; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		B20000010000000000000020 /* AddressBook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AddressBook.framework; path = System/Library/Frameworks/AddressBook.framework; sourceTree = SDKROOT; };
+		B20000010000000000000020 /* GLKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLKit.framework; path = System/Library/Frameworks/GLKit.framework; sourceTree = SDKROOT; };
 		B20000010000000000000021 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
 		B30000010000000000000001 /* FontPrivacyTestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FontPrivacyTestApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -77,7 +77,7 @@
 		B50000010000000000000005 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				B20000010000000000000020 /* AddressBook.framework */,
+				B20000010000000000000020 /* GLKit.framework */,
 				B20000010000000000000021 /* OpenGLES.framework */,
 			);
 			name = Frameworks;
