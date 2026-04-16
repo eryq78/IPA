@@ -90,18 +90,8 @@ jobs:
           for ttf in "$APP/Fonts/"*.ttf; do
             [ -f "$ttf" ] || continue
             fname=$(basename "$ttf")
-            # Use python to read the name table
-            python3 -c "
-from fontTools.ttLib import TTFont
-try:
-    f = TTFont('$ttf')
-    name = f['name']
-    family = name.getDebugName(1) or '(unknown)'
-    style  = name.getDebugName(2) or '(unknown)'
-    print(f'  $fname  →  {family} {style}')
-except Exception as e:
-    print(f'  $fname  →  (could not parse: {e})')
-" 2>/dev/null || echo "  $fname  →  (fonttools not available)"
+            family=$(python3 -c "from fontTools.ttLib import TTFont; f=TTFont('$ttf'); print((f['name'].getDebugName(1) or '?') + ' ' + (f['name'].getDebugName(2) or ''))" 2>/dev/null || echo "(parse error)")
+            echo "  $fname  ->  $family"
           done
 
           # ── DEPRECATED SDKs ───────────────────────────────────────
